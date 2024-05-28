@@ -1,5 +1,5 @@
-from tensor.tensor import Tensor
-from module.module import Module
+from ..Tensor.Tensor import Tensor
+from model.module import Module
 import numpy
 
 class Linear(Module):
@@ -20,4 +20,5 @@ class Linear(Module):
         return X_out
     
 def init_He(in_features, out_features, dtype):
-    assert(False)
+    stddev = numpy.sqrt(2 / in_features)
+    return Tensor(numpy.random.randn(in_features, out_features).astype(dtype) * stddev, requires_grad=True)

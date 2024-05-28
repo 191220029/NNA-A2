@@ -1,6 +1,7 @@
+from typing import Optional, List
+import numpy
 from numpy import ndarray
-from typing import List, Optional
-from tensor.ops.op import Op
+from op import Op
 
 class Value:
     op: Optional[Op] # 节点对应的计算操作， Op是自定义的计算操作类
@@ -18,19 +19,30 @@ class Value:
         return self.op is None
 
     def __del__(self):
-        assert(False)
+        self.cached_data = None
 
     def _init(self, op: Optional[Op], inputs: List["Value"],
         *
         , num_outputs: int = 1,
         cached_data: ndarray = None, requires_grad: Optional[bool] = None):
-        assert(False)   
+        self.op = op
+        self.inputs = inputs
+        self.cached_data = cached_data
+        self.requires_grad = requires_grad if requires_grad is not None else any(x.requires_grad for x in inputs)
+        self.grad = None 
 
     @classmethod
     def make_const(cls, data,
         *
         , requires_grad=False): # 建立一个用data生成的独立节点
-        assert(False)   
+        tensor = cls.__new__(cls)
+        tensor.cached_data = numpy.array(data)
+        tensor.requires_grad = requires_grad
+        tensor.op = None
+        tensor.inputs = []
+        return tensor
 
     def make_from_op(cls, op: Op, inputs: List["Value"]): # 根据op生成节点
-        assert(False)   
+        tensor = cls.__new__(cls)
+        tensor._init(op, inputs)
+        return tensor

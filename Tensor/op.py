@@ -1,10 +1,11 @@
 from abc import abstractmethod
 from typing import Tuple
+from numpy import ndarray
 
 class Op():
     @abstractmethod
     def compute(self,
-    *args: Tuple["NDArray"]) -> NDArray:
+    *args: Tuple["ndarray"]) -> ndarray:
     # 前向计算. 参数args是由NDArray组成的序列Tuple，输出计算的结果NDArray
         assert(False)
     @abstractmethod
