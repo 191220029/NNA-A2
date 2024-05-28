@@ -1,4 +1,4 @@
-from module.module import Module
+from model.module import Module
 from tensor.tensor import Tensor
 
 class Sequential(Module):

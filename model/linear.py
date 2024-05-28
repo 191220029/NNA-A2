@@ -1,4 +1,4 @@
-from ..Tensor.Tensor import Tensor
+from ..tensor.tensor import Tensor
 from model.module import Module
 import numpy
 

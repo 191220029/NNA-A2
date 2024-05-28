@@ -1,5 +1,5 @@
 from tensor.tensor import Tensor
-from module.module import Module
+from model.module import Module
 from typing import List
 
 class Parameter(Tensor): # 声明一个类专门表示网络参数
