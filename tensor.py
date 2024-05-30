@@ -1,3 +1,4 @@
+import copy
 import numpy
 from typing import Dict, List
 from op import Op
@@ -27,8 +28,12 @@ class Tensor (Value):
         return tensor
 
     @ property
-    def data(self): #对cached_data进行封装
+    def data(self) -> numpy.ndarray: #对cached_data进行封装
         return self.cached_data
+    
+    @ property
+    def size(self):
+        return self.cached_data.size
 
     @ data.setter
     def data(self, value):
@@ -59,17 +64,42 @@ class Tensor (Value):
             return EWiseAdd()(self, other)
         else:
             return AddScalar(other)(self)
-
+    def __radd__(self, other):
+        return self.__add__(other)
     def __sub__(self, other):
         if isinstance(other, Tensor):
             return EWiseAdd()(self, -other)
         else:
             return AddScalar(-other)(self)
+    def __rsub__(self, other):
+        return -self.__sub__(other)    
+    def __neg__(self):
+        return Negate()(self)
     def __matmul__(self, other):
         if isinstance(other, Tensor):
             return MatMul()(self, other)
         else:
             raise TypeError(f"Unsupported operand type(s) for @: 'Tensor' and '{type(other).__name__}'")
+    def __mul__(self, other):
+        if isinstance(other, Tensor):
+            return EWiseMul()(self, other)
+        else:
+            return MulScalar(other)(self)
+    def __rmul__(self, other):
+        return self.__mul__(other)
+    def __pow__(self, scalar):
+        return PowerScalar(scalar)(self)
+    def sum(self, axis=None, *args, **kwargs):
+        return Summation(axis)(self)
+    def reshape(self, shape, *args, **kwargs):
+        return Reshape(shape)(self)
+    
+    @staticmethod
+    def sum_tensors(tensor_list: List["Tensor"]):
+        result = Tensor.from_numpy(tensor_list[0].data, tensor_list[0].dtype)
+        for tensor in tensor_list[1:]:
+            result = result + tensor
+        return result
         
     def broadcast_to(self, shape):
         return BroadcastTo(shape)(self)
@@ -90,7 +120,7 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     node_to_output_grads_list[output_tensor] = [out_grad]
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor]))) # 请自行实现拓扑排序函数
     for node in reverse_topo_order:
-        node.grad = sum(node_to_output_grads_list[node]) # 求node的partial adjoint之和，存入属性grad
+        node.grad = Tensor.sum_tensors(node_to_output_grads_list[node]) # 求node的partial adjoint之和，存入属性grad
         if node.is_leaf():
             continue
         for i, grad in enumerate(node.op.gradient(node.grad, node)): # 计算node.inputs的partial adjoint
@@ -99,20 +129,20 @@ def compute_gradient_of_variables(output_tensor, out_grad):
                 node_to_output_grads_list[j] = []
             node_to_output_grads_list[j].append(grad) # 将计算出的partial adjoint存入dict
 
-def find_topo_sort(output_tensors):
+def find_topo_sort(output_tensors) -> List[Tensor]:
     visited = set()
     topo_order = []
 
-    def dfs(tensor):
-        if tensor in visited:
+    def dfs(t):
+        if t in visited:
             return
-        visited.add(tensor)
-        for inp in tensor.inputs:
+        visited.add(t)
+        for inp in t.inputs:
             dfs(inp)
-        topo_order.append(tensor)
+        topo_order.append(t)
 
-    for tensor in output_tensors:
-        dfs(tensor)
+    for t in output_tensors:
+        dfs(t)
     return topo_order
 
 
@@ -134,14 +164,14 @@ class EWiseAdd(TensorOp):
     def compute(self, a: ndarray, b: ndarray):
         return a + b
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
-        return out_grad, out_grad
+        return (out_grad, out_grad)
 
 # 对应元素乘
 class EWiseMul(TensorOp):
     def compute(self, a: numpy.ndarray, b: numpy.ndarray):
         return a * b
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
-        return out_grad * node.inputs[1], out_grad * node.inputs[0]
+        return (out_grad * node.inputs[1], out_grad * node.inputs[0])
     
 # 乘常数
 class MulScalar(TensorOp):
@@ -167,7 +197,7 @@ class EWiseDiv(TensorOp):
         return a / b
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
         a, b = node.inputs
-        return out_grad / b, -out_grad * a / (b * b)
+        return (out_grad / b, -out_grad * a / (b * b))
 
 # 除以常数
 class DivScalar(TensorOp):
@@ -199,30 +229,25 @@ class BroadcastTo(TensorOp):
     def __init__(self, shape):
         self.shape = shape
     def compute(self, a: numpy.ndarray):
-        return numpy.broadcast_to(a, self.shape)
+        broadcasted_data = numpy.broadcast_to(a.data, self.shape)
+        return broadcasted_data
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
-        a = node.inputs[0]
-        in_shape = a.shape
-        out_shape = self.shape
+        input_shape = node.inputs[0].shape
+        grad = Tensor.from_numpy(out_grad.data, out_grad.dtype)
 
-        # Calculate the gradient reduction along the broadcast dimensions
-        axes = []
-        for i in range(len(out_shape)):
-            if i >= len(in_shape) or in_shape[i] == 1:
-                axes.append(i)
-
-        grad = out_grad.realize_cached_data()
-        for axis in reversed(axes):
-            grad = numpy.sum(grad, axis=axis, keepdims=True)
-
-        return Tensor(grad, requires_grad=a.requires_grad),
+        # 将广播后的梯度还原到原始形状
+        for axis, dim in enumerate(input_shape):
+            if dim == 1:
+                grad = grad.sum(axis=axis, keepdims=True)
+        
+        return (grad,)
 
 # 按维度求和
 class Summation(TensorOp):
     def __init__(self, axis=None):
         self.axis = axis
     def compute(self, a: numpy.ndarray):
-        return numpy.sum(a, axis=self.axis)
+        return numpy.sum(a, axis=self.axis, keepdims=True)
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
         input_shape = node.inputs[0].shape
         if self.axis is None:
@@ -236,17 +261,17 @@ class Summation(TensorOp):
 # 矩阵相乘
 class MatMul(TensorOp):
     def compute(self, a: numpy.ndarray, b: numpy.ndarray):
-        return numpy.matmul(a, b)
+        return a @ b
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
         a, b = node.inputs
-        grad_a = numpy.matmul(out_grad, numpy.transpose(b))
-        grad_b = numpy.matmul(numpy.transpose(a), out_grad)
-        return grad_a, grad_b
+        grad_a = out_grad.data @ numpy.transpose(b.data)
+        grad_b = numpy.transpose(a.data) @ out_grad.data
+        return (grad_a, grad_b)
 
 # 求相反数
 class Negate(TensorOp):
     def compute(self, a: numpy.ndarray):
-        return -a
+        return Tensor(-a)
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
         return (-out_grad,)
 

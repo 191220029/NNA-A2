@@ -2,7 +2,7 @@ import sys
 sys.path.append("..")
 sys.path.append(".")
 
-from tensor import Tensor
+from tensor import Tensor, MatMul
 from module import Module
 import numpy
 
@@ -20,7 +20,8 @@ class Linear(Module):
     def forward(self, X: Tensor) -> Tensor:
         X_out = X @ self.weight
         if self.bias:
-            return X_out + self.bias.broadcast_to(X_out.shape)
+            t = self.bias.broadcast_to(X_out.shape)
+            return X_out + t
         return X_out
     
 def init_He(in_features, out_features, dtype):

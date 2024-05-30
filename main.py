@@ -1,6 +1,7 @@
 from linear import Linear
 from tensor import Tensor
 import copy
+import numpy
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sgd import SGD
@@ -74,23 +75,29 @@ y_test = Tensor(y_test, dtype="long")
 
 model = Linear(in_features=4, out_features=1)
 
-def train(model, criterion, optimizer, X_train, y_train, epochs=100):
+def train(model, criterion: MSELoss, optimizer, X_train: Tensor, y_train: Tensor, epochs=100):
     for epoch in range(epochs):
+        print(f"Epoch {epoch + 1}")
         optimizer.zero_grad()
 
         # Forward pass
+        print(f"Epoch {epoch + 1}")
         predictions = model.forward(X_train)
+        print(f"Epoch {epoch + 1}")
 
         # Compute loss
         loss = criterion(predictions, y_train)
+        print(f"Epoch {epoch + 1}")
 
         # Backward pass
         loss.backward()
+        print(f"Epoch {epoch + 1}")
 
         # Update parameters
         optimizer.step()
+        print(f"Epoch {epoch + 1}")
 
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 2 == 0:
             print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss.data}')
 
 def predict(model, X):
