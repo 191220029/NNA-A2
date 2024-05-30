@@ -9,3 +9,6 @@ class SGD(Optimizer):
         for _, param in enumerate(self.params):
             grad = Tensor(param.grad, dtype='float32').data
             param.data= param.data - grad * self.lr
+    def zero_grad(self):
+        for param in self.params:
+            param.grad = None

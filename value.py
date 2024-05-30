@@ -48,4 +48,5 @@ class Value:
     def make_from_op(cls, op: Op, inputs: List["Value"]): # 根据op生成节点
         tensor = cls.__new__(cls)
         tensor._init(op, inputs)
+        tensor.realize_cached_data()
         return tensor

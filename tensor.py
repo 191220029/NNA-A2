@@ -23,25 +23,26 @@ class Tensor (Value):
         tensor._init(op, inputs)
         # if not LAZY_MODE: #LAZY_MODE用于实现先建图后计算 （静态计算图，作业中无需实现）
         #   tensor.realize_cached_data()
+        tensor.realize_cached_data()
         return tensor
 
     @ property
-    def data (self): #对cached_data进行封装
+    def data(self): #对cached_data进行封装
         return self.cached_data
 
     @ data.setter
-    def data (self, value):
+    def data(self, value):
         self.cached_data = numpy.array(value)
 
     @ property
-    def shape (self):
+    def shape(self):
         return self.cached_data.shape
 
     @ property
-    def dtype (self):
+    def dtype(self):
         return self.cached_data.dtype
 
-    def backward (self, out_grad=None):
+    def backward(self, out_grad=None):
         # 最后一个节点时，out_grad为1
         if out_grad:
             out_grad = out_grad
@@ -50,20 +51,28 @@ class Tensor (Value):
             compute_gradient_of_variables(self, out_grad)
 
 
-    def detach (self):
+    def detach(self):
         # 创建一个新的张量，但不接入计算图
         return Tensor.make_const(self.realize_cached_data())
-    def __add__ (self, other):
+    def __add__(self, other):
         if isinstance(other, Tensor):
             return EWiseAdd()(self, other)
         else:
             return AddScalar(other)(self)
 
-    def __sub__ (self, other):
+    def __sub__(self, other):
         if isinstance(other, Tensor):
             return EWiseAdd()(self, -other)
         else:
             return AddScalar(-other)(self)
+    def __matmul__(self, other):
+        if isinstance(other, Tensor):
+            return MatMul()(self, other)
+        else:
+            raise TypeError(f"Unsupported operand type(s) for @: 'Tensor' and '{type(other).__name__}'")
+        
+    def broadcast_to(self, shape):
+        return BroadcastTo(shape)(self)
 
     @staticmethod
     def make_const(data, requires_grad=False):
@@ -192,10 +201,21 @@ class BroadcastTo(TensorOp):
     def compute(self, a: numpy.ndarray):
         return numpy.broadcast_to(a, self.shape)
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
-        input_shape = node.inputs[0].shape
-        axes = tuple(range(out_grad.ndim - len(input_shape)))
-        axes += tuple(i for i, s in enumerate(input_shape) if s == 1)
-        return (numpy.sum(out_grad, axis=axes, keepdims=True),)
+        a = node.inputs[0]
+        in_shape = a.shape
+        out_shape = self.shape
+
+        # Calculate the gradient reduction along the broadcast dimensions
+        axes = []
+        for i in range(len(out_shape)):
+            if i >= len(in_shape) or in_shape[i] == 1:
+                axes.append(i)
+
+        grad = out_grad.realize_cached_data()
+        for axis in reversed(axes):
+            grad = numpy.sum(grad, axis=axis, keepdims=True)
+
+        return Tensor(grad, requires_grad=a.requires_grad),
 
 # 按维度求和
 class Summation(TensorOp):
