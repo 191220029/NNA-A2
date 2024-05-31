@@ -83,22 +83,25 @@ def train(model, criterion: MSELoss, optimizer, X_train: Tensor, y_train: Tensor
         # Forward pass
         print(f"Epoch {epoch + 1}")
         predictions = model.forward(X_train)
-        print(f"Epoch {epoch + 1}")
+        print(f"Epoch {epoch + 1} forward")
 
         # Compute loss
         loss = criterion(predictions, y_train)
-        print(f"Epoch {epoch + 1}")
+        print(f"Epoch {epoch + 1} loss")
 
         # Backward pass
         loss.backward()
-        print(f"Epoch {epoch + 1}")
+        print(f"Epoch {epoch + 1} backward")
 
         # Update parameters
         optimizer.step()
-        print(f"Epoch {epoch + 1}")
+        print(f"Epoch {epoch + 1} optimizer")
 
         if (epoch + 1) % 2 == 0:
             print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss.data}')
+
+        loss.__del__()
+        predictions.__del__()
 
 def predict(model, X):
     return model.forward(X)
@@ -107,4 +110,4 @@ optimizer = SGD(params=[model.weight, model.bias], lr=0.01)
 criterion = MSELoss()
 
 # Train the model
-train(model, criterion, optimizer, X_train, y_train, epochs=100)
+train(model, criterion, optimizer, X_train, y_train, epochs=5)

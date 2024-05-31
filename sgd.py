@@ -7,8 +7,10 @@ class SGD(Optimizer):
         self.lr = lr
     def step(self):
         for _, param in enumerate(self.params):
+            param.grad.debug()
             grad = Tensor.from_numpy(param.grad.data, dtype=param.grad.dtype)
-            param.data= param.data - grad * self.lr
+            param.data = param.data - grad * self.lr
+            param.debug()
     def zero_grad(self):
         for param in self.params:
             param.grad = None

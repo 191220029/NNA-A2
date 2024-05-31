@@ -14,6 +14,16 @@ class Tensor (Value):
         self.op = None
         self.inputs = []
 
+    def __del__(self):
+        self.op = None
+        self.inputs = []
+        self.cached_data = None
+        if self.grad:
+            self.grad.__del__()
+    def clear(self):
+        self.op = None
+        self.inputs = []
+
     @staticmethod
     def from_numpy(numpy_array, dtype):
         return Tensor(numpy_array, dtype=dtype)
@@ -48,6 +58,7 @@ class Tensor (Value):
         return self.cached_data.dtype
 
     def backward(self, out_grad=None):
+        self.debug()
         # 最后一个节点时，out_grad为1
         if out_grad:
             out_grad = out_grad
@@ -115,6 +126,16 @@ class Tensor (Value):
                     cached_data = tensor_data, requires_grad = requires_grad)
         return tensor
     
+    def clear_cache(self):
+        self.cached_data = None
+        for inp in self.inputs:
+            inp.clear_cache()
+
+    def debug(self):
+        print(f"Tensor{{{self}, inputs: {self.inputs}, grad: {self.grad}}}")
+        for i in self.inputs:
+            i.debug()
+    
 def compute_gradient_of_variables(output_tensor, out_grad):
     node_to_output_grads_list: Dict[Tensor, List[Tensor]] = {} # dict结构，用于存储partial adjoint
     node_to_output_grads_list[output_tensor] = [out_grad]
@@ -128,6 +149,11 @@ def compute_gradient_of_variables(output_tensor, out_grad):
             if j not in node_to_output_grads_list:
                 node_to_output_grads_list[j] = []
             node_to_output_grads_list[j].append(grad) # 将计算出的partial adjoint存入dict
+
+    # 清理计算图
+    for node in reverse_topo_order:
+        node.clear()
+    
 
 def find_topo_sort(output_tensors) -> List[Tensor]:
     visited = set()

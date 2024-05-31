@@ -22,6 +22,8 @@ class Value:
         return self.op is None
 
     def __del__(self):
+        self.op = None
+        self.inputs = None
         self.cached_data = None
 
     def _init(self, op: Optional[Op], inputs: List["Value"],
