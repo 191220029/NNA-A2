@@ -1,3 +1,4 @@
+mod module;
 mod op;
 mod tensor;
 

@@ -1,23 +1,27 @@
-use std::{collections::HashMap, ops::Add};
+use std::{hash::Hash, ops::Add};
 
 use ndarray::ArrayD;
 
-use crate::op::op::Op;
+use crate::op::op::{EWiseAdd, Op};
 
-// pub type TensorId = u32;
-// pub type TensorMap = HashMap<TensorId, Tensor>;
-#[derive(Clone)]
-pub struct Tensor<'a> {
+use super::tensor_factory::TensorFactory;
+
+pub type TensorId = u32;
+
+#[derive(Clone, Debug)]
+pub struct Tensor {
+    pub id: u32,
     pub grad: Option<ArrayD<f64>>,
     pub cached_data: Option<ArrayD<f64>>,
-    pub op: Option<Box<&'a dyn Op>>,
-    pub inputs: Vec<Tensor<'a>>,
+    pub op: Option<Op>,
+    pub inputs: Vec<TensorId>,
     pub requires_grad: bool,
 }
 
-impl Default for Tensor<'_> {
+impl Default for Tensor {
     fn default() -> Self {
         Self {
+            id: 0,
             grad: None,
             cached_data: None,
             op: None,
@@ -27,22 +31,32 @@ impl Default for Tensor<'_> {
     }
 }
 
-impl Tensor<'_> {
-    fn is_leaf(&self) -> bool {
+impl Tensor {
+    pub fn is_leaf(&self) -> bool {
         self.op.is_none()
     }
-    fn realize_cached_data(&mut self) -> ArrayD<f64> {
-        if self.is_leaf() || self.cached_data.is_some() {
-            return self.cached_data.clone().unwrap();
+
+    pub fn shape(&self) -> &[usize] {
+        self.cached_data.as_ref().unwrap().shape()
+    }
+    pub fn from(value: ArrayD<f64>, factory: &mut TensorFactory) -> TensorId {
+        let t = Self {
+            id: 0,
+            grad: None,
+            cached_data: Some(value),
+            op: None,
+            inputs: vec![],
+            requires_grad: true,
+        };
+        factory.insert_tensor(t)
+    }
+    
+    pub fn sum_tensors(tensors: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        let mut iter = tensors.iter();
+        let mut result = iter.next().unwrap().clone();
+        while let Some(t) = iter.next() {
+            result = result + t;
         }
-        self.cached_data = Some(
-            self.op.as_ref().unwrap().compute(
-                self.inputs
-                    .iter_mut()
-                    .map(|i| i.realize_cached_data())
-                    .collect(),
-            ),
-        );
-        self.cached_data.clone().unwrap()
+        result
     }
 }

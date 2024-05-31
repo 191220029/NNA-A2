@@ -64,7 +64,7 @@ class Tensor (Value):
             out_grad = out_grad
         else:
             out_grad = Tensor(numpy.ones(self.shape))
-            compute_gradient_of_variables(self, out_grad)
+        compute_gradient_of_variables(self, out_grad)
 
 
     def detach(self):
