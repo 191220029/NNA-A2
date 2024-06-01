@@ -1,10 +1,6 @@
-use std::{hash::Hash, ops::Add};
-
 use ndarray::{ArrayD, Axis};
 
-use crate::op::op::{EWiseAdd, Op};
-
-use super::tensor_factory::TensorFactory;
+use crate::op::op::Op;
 
 pub type TensorId = u32;
 
@@ -39,18 +35,7 @@ impl Tensor {
     pub fn shape(&self) -> &[usize] {
         self.cached_data.as_ref().unwrap().shape()
     }
-    pub fn from(value: ArrayD<f64>, factory: &mut TensorFactory) -> TensorId {
-        let t = Self {
-            id: 0,
-            grad: None,
-            cached_data: Some(value),
-            op: None,
-            inputs: vec![],
-            requires_grad: true,
-        };
-        factory.insert_tensor(t)
-    }
-    
+
     pub fn sum_tensors(tensors: Vec<ArrayD<f64>>, shape: &[usize]) -> ArrayD<f64> {
         let mut iter = tensors.iter();
         let mut result = iter.next().unwrap().clone();
@@ -59,7 +44,11 @@ impl Tensor {
         }
         if result.shape() != shape {
             let axis = result.shape().len() - shape.len();
-            result = result.sum_axis(Axis(axis)).to_shared().reshape(shape).to_owned();
+            result = result
+                .sum_axis(Axis(axis))
+                .to_shared()
+                .reshape(shape)
+                .to_owned();
         }
         result
     }
