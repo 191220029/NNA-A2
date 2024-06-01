@@ -1,30 +1,18 @@
-pub mod linear;
+use crate::tensor::tensor::TensorId;
+
 mod initialize;
+pub mod linear;
 
 trait Module {
-    fn init(&mut self):
-        self.training = True
+    fn init(&mut self);
 
-    def parameters(self) -> List["Tensor"]:
-        return Parameter._unpack_params(self.__dict__)
-    
-    def _children(self) -> List["Module"]:
-        return _child_modules(self.__dict__)
-    
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
-    
-    @abstractmethod
-    def forward(self):
-        pass
+    fn parameters(&self) -> Vec<TensorId>;
 
-    def eval(self):
-        self.training = False
-        for m in self._children():
-            m.training = False
+    fn children(&self) -> Vec<Box<&dyn Module>>;
 
-    def train(self):
-        self.training = True
-        for m in self._children():
-            m.training = True
+    fn forward(&mut self);
+
+    fn eval(&mut self);
+
+    fn train(&mut self);
 }

@@ -1,3 +1,4 @@
+mod dataset;
 mod module;
 mod op;
 mod tensor;

@@ -27,3 +27,7 @@ class Linear(Module):
 def init_He(in_features, out_features, dtype):
     stddev = numpy.sqrt(2 / in_features)
     return Tensor(numpy.random.randn(in_features, out_features).astype(dtype) * stddev, requires_grad=True)
+def init_Xavier(in_features, out_features, dtype="float32"):
+    limit = numpy.sqrt(6 / (in_features + out_features))
+    weights = numpy.random.uniform(-limit, limit, (in_features, out_features)).astype(dtype)
+    return Tensor(weights)
