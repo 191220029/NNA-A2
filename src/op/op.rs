@@ -15,7 +15,12 @@ impl Op {
             Op::Sum(s) => s.compute(args),
         }
     }
-    pub fn gradient(&self, out_grad: &ArrayD<f64>, node: &Tensor, factory: &TensorFactory) -> Vec<ArrayD<f64>> {
+    pub fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        factory: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
         match self {
             Op::EWiseAdd(e) => e.gradient(out_grad, node, factory),
             Op::Sum(s) => s.gradient(out_grad, node, factory),
@@ -25,7 +30,12 @@ impl Op {
 
 trait OpTrait {
     fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64>;
-    fn gradient(&self, out_grad: &ArrayD<f64>, node: &Tensor, factory: &TensorFactory) -> Vec<ArrayD<f64>>;
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        factory: &TensorFactory,
+    ) -> Vec<ArrayD<f64>>;
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -46,22 +56,23 @@ pub struct Summation {
 impl OpTrait for Summation {
     fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
         match self.axis {
-            Some(axis) => {
-                args[0].sum_axis(Axis(axis))
-            }
-            None => {
-                ArrayD::from_elem(IxDyn(&[1]), args[0].sum())
-            }
+            Some(axis) => args[0].sum_axis(Axis(axis)),
+            None => ArrayD::from_elem(IxDyn(&[1]), args[0].sum()),
         }
     }
-    fn gradient(&self, out_grad: &ArrayD<f64>, node: &Tensor, factory: &TensorFactory) -> Vec<ArrayD<f64>> {
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        factory: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
         let input_shape = factory.get(&node.inputs[0]).unwrap().shape();
         let mut shape = out_grad.shape().to_vec();
-        
+
         if let Some(axis) = self.axis {
             shape.insert(axis, 1);
         }
-        
+
         let out_grad = out_grad.to_shared().reshape(shape).to_owned();
         vec![out_grad.broadcast(input_shape).unwrap().to_owned()]
     }

@@ -26,8 +26,24 @@ impl TensorFactory {
             }
         }
     }
-    
-    pub fn make_from_op( 
+
+    pub fn new_tensor(&mut self, value: ArrayD<f64>, requires_grad: Option<bool>) -> TensorId {
+        let t = Tensor {
+            id: 0,
+            grad: None,
+            cached_data: Some(value),
+            op: None,
+            inputs: vec![],
+            requires_grad: if let Some(rg) = requires_grad {
+                rg
+            } else {
+                true
+            },
+        };
+        self.insert_tensor(t)
+    }
+
+    pub fn make_from_op(
         &mut self,
         op: Op,
         inputs: Vec<TensorId>,
@@ -77,7 +93,7 @@ impl TensorFactory {
     pub fn realize_cached_data(&mut self, k: &TensorId) {
         let t = self.get(k).unwrap();
         if t.is_leaf() || t.cached_data.is_some() {
-            return; 
+            return;
         }
 
         let r = Some(
@@ -167,24 +183,71 @@ mod test_tensor {
 
     use crate::{op::op::Op, tensor::tensor_factory::TensorFactory};
 
-    use super::Tensor;
-
     #[test]
     fn test_auto_gradient() {
         let mut factory = TensorFactory::default();
 
-        let a = Tensor::from(ArrayD::zeros(IxDyn(&[2, 1])), &mut factory);
-        let b = Tensor::from(ArrayD::ones(IxDyn(&[1, 2])), &mut factory);
+        let a = factory.new_tensor(ArrayD::zeros(IxDyn(&[2, 1])), None);
+        let b = factory.new_tensor(ArrayD::ones(IxDyn(&[1, 2])), None);
 
         let c = factory.make_from_op(Op::EWiseAdd(crate::op::op::EWiseAdd {}), vec![a, b], None);
-        let d = factory.make_from_op(Op::Sum(crate::op::op::Summation {axis: None}), vec![c], None);
+        let d = factory.make_from_op(
+            Op::Sum(crate::op::op::Summation { axis: None }),
+            vec![c],
+            None,
+        );
 
         factory.backward(&d, None);
 
-        assert_eq!(factory.get(&a).unwrap().grad.to_owned().unwrap().to_string(), "[[2],\n [2]]".to_string());
-        assert_eq!(factory.get(&b).unwrap().grad.to_owned().unwrap().to_string(), "[[2, 2]]".to_string());
-        assert_eq!(factory.get(&c).unwrap().grad.to_owned().unwrap().to_string(), "[[1, 1],\n [1, 1]]".to_string());
-        assert_eq!(factory.get(&d).unwrap().grad.to_owned().unwrap().to_string(), "[1]".to_string());
-        assert_eq!(factory.get(&d).unwrap().cached_data.to_owned().unwrap().to_string(), "[4]".to_string());
+        assert_eq!(
+            factory
+                .get(&a)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[[2],\n [2]]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&b)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[[2, 2]]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&c)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[[1, 1],\n [1, 1]]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&d)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[1]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&d)
+                .unwrap()
+                .cached_data
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[4]".to_string()
+        );
     }
 }
