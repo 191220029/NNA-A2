@@ -43,7 +43,7 @@ impl TensorFactory {
                 flag
             }
         };
-        let mut tensor = Tensor {
+        let tensor = Tensor {
             id: 0,
             grad: None,
             cached_data: None,
@@ -69,13 +69,16 @@ impl TensorFactory {
         let out_grad = if let Some(out_grad) = out_grad {
             out_grad
         } else {
-            ArrayD::zeros(node.shape())
+            ArrayD::ones(node.shape())
         };
 
         compute_gradient_of_variables(node.id, out_grad, self)
     }
     pub fn realize_cached_data(&mut self, k: &TensorId) {
         let t = self.get(k).unwrap();
+        if t.is_leaf() || t.cached_data.is_some() {
+            return; 
+        }
 
         let r = Some(
             t.op.clone().unwrap().compute(
@@ -107,21 +110,25 @@ fn compute_gradient_of_variables(
         let node = factory.get_mut(&id).unwrap();
         node.grad = Some(Tensor::sum_tensors(
             node_to_output_grads_list.get(&node.id).unwrap().to_owned(),
+            node.shape(),
         ));
+
         if node.is_leaf() {
             continue;
         }
+
+        let node = factory.get(&id).unwrap();
         for (i, grad) in node
             .op
             .as_ref()
             .unwrap()
-            .gradient(node.grad.as_ref().unwrap(), &node)
+            .gradient(node.grad.as_ref().unwrap(), &node, &factory)
             .into_iter()
             .enumerate()
         {
             let j = &node.inputs[i];
             if !node_to_output_grads_list.contains_key(j) {
-                node_to_output_grads_list.insert(j.clone(), vec![]);
+                node_to_output_grads_list.insert(*j, vec![]);
             }
             node_to_output_grads_list.get_mut(j).unwrap().push(grad);
         }
@@ -158,7 +165,7 @@ fn find_topo_sort(tensors: Vec<TensorId>, factory: &TensorFactory) -> Vec<Tensor
 mod test_tensor {
     use ndarray::{ArrayD, IxDyn};
 
-    use crate::tensor::tensor_factory::TensorFactory;
+    use crate::{op::op::Op, tensor::tensor_factory::TensorFactory};
 
     use super::Tensor;
 
@@ -166,15 +173,18 @@ mod test_tensor {
     fn test_auto_gradient() {
         let mut factory = TensorFactory::default();
 
-        let a = Tensor::from(ArrayD::zeros(IxDyn(&[2, 2])), &mut factory);
-        let b = Tensor::from(ArrayD::ones(IxDyn(&[2, 2])), &mut factory);
+        let a = Tensor::from(ArrayD::zeros(IxDyn(&[2, 1])), &mut factory);
+        let b = Tensor::from(ArrayD::ones(IxDyn(&[1, 2])), &mut factory);
 
-        let c = &a + &b;
+        let c = factory.make_from_op(Op::EWiseAdd(crate::op::op::EWiseAdd {}), vec![a, b], None);
+        let d = factory.make_from_op(Op::Sum(crate::op::op::Summation {axis: None}), vec![c], None);
 
-        factory.backward(&c, None);
+        factory.backward(&d, None);
 
-        println!("a={:?}", a);
-        println!("b={:?}", b);
-        println!("c={:?}", c);
+        assert_eq!(factory.get(&a).unwrap().grad.to_owned().unwrap().to_string(), "[[2],\n [2]]".to_string());
+        assert_eq!(factory.get(&b).unwrap().grad.to_owned().unwrap().to_string(), "[[2, 2]]".to_string());
+        assert_eq!(factory.get(&c).unwrap().grad.to_owned().unwrap().to_string(), "[[1, 1],\n [1, 1]]".to_string());
+        assert_eq!(factory.get(&d).unwrap().grad.to_owned().unwrap().to_string(), "[1]".to_string());
+        assert_eq!(factory.get(&d).unwrap().cached_data.to_owned().unwrap().to_string(), "[4]".to_string());
     }
 }

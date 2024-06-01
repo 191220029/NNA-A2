@@ -1,6 +1,6 @@
 use std::{hash::Hash, ops::Add};
 
-use ndarray::ArrayD;
+use ndarray::{ArrayD, Axis};
 
 use crate::op::op::{EWiseAdd, Op};
 
@@ -51,11 +51,15 @@ impl Tensor {
         factory.insert_tensor(t)
     }
     
-    pub fn sum_tensors(tensors: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+    pub fn sum_tensors(tensors: Vec<ArrayD<f64>>, shape: &[usize]) -> ArrayD<f64> {
         let mut iter = tensors.iter();
         let mut result = iter.next().unwrap().clone();
         while let Some(t) = iter.next() {
             result = result + t;
+        }
+        if result.shape() != shape {
+            let axis = result.shape().len() - shape.len();
+            result = result.sum_axis(Axis(axis)).to_shared().reshape(shape).to_owned();
         }
         result
     }
