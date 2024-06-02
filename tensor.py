@@ -314,4 +314,3 @@ class Exp(TensorOp):
         return numpy.exp(a)
     def gradient(self, out_grad: 'Tensor', node: 'Tensor'):
         return (out_grad * numpy.exp(node.inputs[0]),)
-

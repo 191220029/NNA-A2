@@ -1,6 +1,6 @@
-use ndarray::{ArrayD, Axis, IntoNdProducer};
+use ndarray::{ArrayD, Axis};
 
-use crate::op::op::{into_matrix, Op};
+use crate::op::op::Op;
 
 pub type TensorId = u32;
 
@@ -47,14 +47,11 @@ impl Tensor {
             let mut axis = 0;
             result = result.sum_axis(Axis(axis));
             axis += 1;
-            while result.shape().len() as i32 - shape.len() as i32 >  0 {
+            while result.shape().len() as i32 - shape.len() as i32 > 0 {
                 result = result.sum_axis(Axis(axis));
                 axis += 1;
             }
         }
-        result
-        .to_shared()
-        .reshape(shape)
-        .to_owned()
+        result.to_shared().reshape(shape).to_owned()
     }
 }

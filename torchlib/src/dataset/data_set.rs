@@ -79,11 +79,38 @@ pub struct DataSet {
 }
 
 impl DataSet {
-    pub fn get_x() -> ArrayD<f64> {
-        unimplemented!()
+    pub fn get_x(&self) -> ArrayD<f64> {
+        let it = self.data.columns().into_iter();
+        let mut i = 0;
+        let x: Vec<f64> = it
+            .filter(|_| {
+                i += 1;
+                i < self.labels.len()
+            })
+            .map(|c| c.to_vec())
+            .collect::<Vec<Vec<f64>>>()
+            .into_iter()
+            .flatten()
+            .collect();
+        ArrayD::from_shape_vec(IxDyn(&[self.shape()[0], self.shape()[1] - 1]), x).unwrap()
     }
-    pub fn get_y() -> ArrayD<f64> {
-        unimplemented!()
+    pub fn get_y(&self) -> ArrayD<f64> {
+        let it = self.data.columns().into_iter();
+        let mut i = 0;
+        let x: Vec<f64> = it
+            .filter(|_| {
+                i += 1;
+                i == self.labels.len()
+            })
+            .map(|c| c.to_vec())
+            .collect::<Vec<Vec<f64>>>()
+            .into_iter()
+            .flatten()
+            .collect();
+        ArrayD::from_shape_vec(IxDyn(&[self.shape()[0], 1]), x).unwrap()
+    }
+    pub fn shape(&self) -> &[usize] {
+        self.data.shape()
     }
 }
 
@@ -95,7 +122,10 @@ mod test_data_set {
 
     #[test]
     fn test_data_set_iris() {
-        let data_set = RawDataSet::read_from_csv(&PathBuf::from("data/iris.csv")).discretization();
+        let data_set =
+            RawDataSet::read_from_csv(&PathBuf::from("../data/iris.csv")).discretization();
         assert_eq!(data_set.data.shape(), &[150, 5]);
+        assert_eq!(data_set.get_x().shape(), &[150, 4]);
+        assert_eq!(data_set.get_y().shape(), &[150, 1]);
     }
 }

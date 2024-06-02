@@ -1,5 +1,5 @@
 use ndarray::{ArrayD, Axis, IxDyn};
-use peroxide::fuga::{Matrix, Shape::Row};
+use peroxide::fuga::{Matrix, PowOps, Shape::Row, Vector};
 
 use crate::tensor::{tensor::Tensor, tensor_factory::TensorFactory};
 
@@ -9,6 +9,8 @@ pub enum Op {
     Sum(Summation),
     MatMul(MatrixMul),
     BCast(BroadCast),
+    Neg(Negate),
+    Power(PowerScalar),
 }
 
 impl Op {
@@ -18,6 +20,8 @@ impl Op {
             Op::Sum(s) => s.compute(args),
             Op::MatMul(m) => m.compute(args),
             Op::BCast(b) => b.compute(args),
+            Op::Neg(n) => n.compute(args),
+            Op::Power(p) => p.compute(args),
         }
     }
     pub fn gradient(
@@ -31,6 +35,8 @@ impl Op {
             Op::Sum(s) => s.gradient(out_grad, node, factory),
             Op::MatMul(m) => m.gradient(out_grad, node, factory),
             Op::BCast(b) => b.gradient(out_grad, node, factory),
+            Op::Neg(n) => n.gradient(out_grad, node, factory),
+            Op::Power(p) => p.gradient(out_grad, node, factory),
         }
     }
 }
@@ -53,6 +59,17 @@ impl OpTrait for EWiseAdd {
     }
     fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
         vec![out_grad.clone(), out_grad.clone()]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct Negate {}
+impl OpTrait for Negate {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        -&args[0]
+    }
+    fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
+        vec![-out_grad.clone()]
     }
 }
 
@@ -136,6 +153,37 @@ impl OpTrait for BroadCast {
         }
 
         return vec![grad];
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct PowerScalar {
+    pub scalar: f64,
+}
+impl OpTrait for PowerScalar {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        let m = into_matrix(args[0].to_owned()).powf(self.scalar);
+        from_matrix(m)
+    }
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        facotry: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
+        let a = into_matrix(out_grad.to_owned());
+        let a = a.mul_scalar(self.scalar);
+        let t = into_matrix(
+            facotry
+                .get(&node.inputs[0])
+                .unwrap()
+                .cached_data
+                .to_owned()
+                .unwrap(),
+        )
+        .powf(self.scalar - 1.);
+    
+        vec![from_matrix(a * t.transpose())]
     }
 }
 

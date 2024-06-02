@@ -13,11 +13,11 @@ import numpy as np
 # print(c.grad)
 # print(d.grad)
 
-a = torch.tensor(np.ones((2,1)), requires_grad=True)
-b = torch.tensor(np.ones((1,2)), requires_grad=True)
+a = torch.tensor(np.ones((5,1)), requires_grad=True)
+b = torch.tensor(np.ones((1,5)), requires_grad=True)
 c = a * b
 c.retain_grad()
-d = c.broadcast_to((2,2,2,2))
+d = c.broadcast_to((5,5,5,5,5))
 d.retain_grad()
 e = d.sum()
 e.retain_grad()

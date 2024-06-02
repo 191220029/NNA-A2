@@ -12,7 +12,9 @@ pub fn init_he(in_features: usize, out_features: usize, factory: &mut TensorFact
         IxDyn(&[in_features, out_features]),
         Normal::new(0., stddev).unwrap(),
     );
-    factory.new_tensor(weights, None)
+    let t = factory.new_tensor(weights, None);
+    // eprintln!("init_He generates weight {t}: {:?}", factory.get(&t).unwrap().cached_data);
+    return t;
 }
 
 //// 均匀分布版Xavier初始化

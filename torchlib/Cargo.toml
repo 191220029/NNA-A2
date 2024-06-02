@@ -1,5 +1,5 @@
 [package]
-name = "module"
+name = "torchlib"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ndarray = "0.15.6"
 ndarray-rand = "0.14.0"
-ndarray-npy = "0.8.1"
-ndarray-linalg = "0.16.0"
+# ndarray-npy = "0.8.1"
+# ndarray-linalg = "0.16.0"
 peroxide = "0.37.4"
 # anyhow = "1.0.86"
