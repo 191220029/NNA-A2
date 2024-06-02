@@ -1,5 +1,8 @@
 use std::{
-    collections::HashMap, fs::File, io::{BufRead, BufReader}, path::Path
+    collections::HashMap,
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
 };
 
 use ndarray::{ArrayD, IxDyn};
@@ -44,26 +47,30 @@ impl RawDataSet {
         let mut discretized_data: Vec<f64> = vec![];
         self.data.columns().into_iter().for_each(|c| {
             let mut set: HashMap<String, f64> = HashMap::new();
-            discretized_data.append(&mut c.into_iter().map(|e| {
-                match e.parse::<f64>() {
-                    Ok(e) => e,
-                    Err(_) => {
-                        match set.get(e) {
+            discretized_data.append(
+                &mut c
+                    .into_iter()
+                    .map(|e| match e.parse::<f64>() {
+                        Ok(e) => e,
+                        Err(_) => match set.get(e) {
                             Some(e) => *e,
                             None => {
                                 set.insert(e.clone(), set.len() as f64);
                                 (set.len() - 1) as f64
-                            },
-                        }
-                    },
-                }
-            }).collect())
+                            }
+                        },
+                    })
+                    .collect(),
+            )
         });
 
-        let discretized_data = ArrayD::from_shape_vec(self.data.t().shape(), discretized_data).unwrap();
-        DataSet { data: discretized_data.t().to_owned(), labels: self.labels }
+        let discretized_data =
+            ArrayD::from_shape_vec(self.data.t().shape(), discretized_data).unwrap();
+        DataSet {
+            data: discretized_data.t().to_owned(),
+            labels: self.labels,
+        }
     }
-
 }
 
 pub struct DataSet {
@@ -89,6 +96,6 @@ mod test_data_set {
     #[test]
     fn test_data_set_iris() {
         let data_set = RawDataSet::read_from_csv(&PathBuf::from("data/iris.csv")).discretization();
-        println!("{}", data_set.data);
+        assert_eq!(data_set.data.shape(), &[150, 5]);
     }
 }

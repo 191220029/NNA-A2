@@ -124,6 +124,7 @@ fn compute_gradient_of_variables(
 
     for id in reverse_topo_order {
         let node = factory.get_mut(&id).unwrap();
+
         node.grad = Some(Tensor::sum_tensors(
             node_to_output_grads_list.get(&node.id).unwrap().to_owned(),
             node.shape(),
@@ -181,7 +182,10 @@ fn find_topo_sort(tensors: Vec<TensorId>, factory: &TensorFactory) -> Vec<Tensor
 mod test_tensor {
     use ndarray::{ArrayD, IxDyn};
 
-    use crate::{op::op::Op, tensor::tensor_factory::TensorFactory};
+    use crate::{
+        op::op::{BroadCast, Op},
+        tensor::tensor_factory::TensorFactory,
+    };
 
     #[test]
     fn test_auto_gradient() {
@@ -248,6 +252,91 @@ mod test_tensor {
                 .unwrap()
                 .to_string(),
             "[4]".to_string()
+        );
+    }
+
+    #[test]
+    fn test_auto_gradient_matmul() {
+        let mut factory = TensorFactory::default();
+
+        let a = factory.new_tensor(ArrayD::ones(IxDyn(&[2, 1])), None);
+        let b = factory.new_tensor(ArrayD::ones(IxDyn(&[1, 2])), None);
+
+        let c = factory.make_from_op(Op::MatMul(crate::op::op::MatrixMul {}), vec![a, b], None);
+
+        let d = factory.make_from_op(
+            Op::BCast(BroadCast {
+                shape: vec![2, 2, 2, 2],
+            }),
+            vec![c],
+            None,
+        );
+        let e = factory.make_from_op(
+            Op::Sum(crate::op::op::Summation { axis: None }),
+            vec![d],
+            None,
+        );
+        factory.backward(&e, None);
+
+        assert_eq!(
+            factory
+                .get(&a)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[[8],\n [8]]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&b)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[[8, 8]]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&c)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[[4, 4],\n [4, 4]]".to_string()
+        );
+        assert_eq!(
+            "[[[[1, 1],\n   [1, 1]],\n\n  [[1, 1],\n   [1, 1]]],\n\n\n [[[1, 1],\n   [1, 1]],\n\n  [[1, 1],\n   [1, 1]]]]",
+            factory
+                .get(&d)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&e)
+                .unwrap()
+                .grad
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[1]".to_string()
+        );
+        assert_eq!(
+            factory
+                .get(&e)
+                .unwrap()
+                .cached_data
+                .to_owned()
+                .unwrap()
+                .to_string(),
+            "[16]".to_string()
         );
     }
 }

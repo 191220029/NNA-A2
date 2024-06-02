@@ -1,6 +1,9 @@
 use ndarray::{ArrayD, IxDyn};
 
-use crate::tensor::{tensor::TensorId, tensor_factory::TensorFactory};
+use crate::{
+    op::op::MatrixMul,
+    tensor::{tensor::TensorId, tensor_factory::TensorFactory},
+};
 
 use super::{initialize::init_he, Module};
 
@@ -25,8 +28,21 @@ impl Module for Linear {
         unimplemented!()
     }
 
-    fn forward(&mut self) {
+    fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
+        let x_out = factory.make_from_op(
+            crate::op::op::Op::MatMul(MatrixMul {}),
+            vec![x, self.weight],
+            None,
+        );
+        if let Some(bias) = self.bias {}
+
         todo!()
+
+        // X_out = X @ self.weight
+        // if self.bias:
+        //     t = self.bias.broadcast_to(X_out.shape)
+        //     return X_out + t
+        // return X_out
     }
 
     fn eval(&mut self) {
