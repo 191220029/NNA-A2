@@ -8,6 +8,10 @@ pub mod linear;
 pub trait Module {
     fn init(&mut self);
 
+    fn in_features(&self) -> usize;
+
+    fn out_features(&self) -> usize;
+
     fn parameters(&self) -> Vec<TensorId>;
 
     fn children(&self) -> Vec<Box<&dyn Module>>;

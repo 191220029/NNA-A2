@@ -8,11 +8,11 @@ pub struct SGD {
 }
 
 impl Optimizer for SGD {
-    fn step(&self, factory: &mut TensorFactory) {
+    fn step(&mut self, factory: &mut TensorFactory) {
         self.params.iter().for_each(|p| {
             let t = factory.get_mut(p).unwrap();
-            let grad = t.grad.clone().unwrap();
-            let data = t.cached_data.clone().unwrap();
+            let grad = t.grad.as_ref().unwrap();
+            let data = t.cached_data.as_ref().unwrap();
             t.cached_data = Some(data - grad * self.lr);
         });
     }

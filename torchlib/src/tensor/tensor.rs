@@ -54,4 +54,9 @@ impl Tensor {
         }
         result.to_shared().reshape(shape).to_owned()
     }
+
+    pub(crate) fn clear_op(&mut self) {
+        self.op = None;
+        self.inputs.clear();
+    }
 }

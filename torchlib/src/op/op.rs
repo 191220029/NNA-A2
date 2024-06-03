@@ -189,11 +189,19 @@ impl OpTrait for PowerScalar {
 
 pub(crate) fn into_matrix(array: ArrayD<f64>) -> Matrix {
     let shape = array.shape().to_owned();
-    Matrix {
-        data: array.into_raw_vec(),
-        row: shape[0],
-        col: shape[1],
-        shape: Row,
+    match shape.get(1) {
+        Some(x) => Matrix {
+            data: array.into_raw_vec(),
+            row: shape[0],
+            col: *x,
+            shape: Row,
+        },
+        None => Matrix {
+            data: array.into_raw_vec(),
+            row: 1,
+            col: shape[0],
+            shape: Row,
+        },
     }
 }
 
