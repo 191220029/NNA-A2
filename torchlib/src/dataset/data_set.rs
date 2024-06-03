@@ -79,6 +79,16 @@ pub struct DataSet {
 }
 
 impl DataSet {
+    pub fn normalize(mut self) -> Self {
+        self.data.columns_mut().into_iter().for_each(|mut c| {
+            let mean = c.mean().unwrap();
+            let std = c.std(1.);
+            c.iter_mut().for_each(|x| {
+                *x = (*x - mean) / std;
+            })
+        });
+        self
+    }
     pub fn get_x(&self) -> ArrayD<f64> {
         let it = self.data.columns().into_iter();
         let mut i = 0;
@@ -122,8 +132,9 @@ mod test_data_set {
 
     #[test]
     fn test_data_set_iris() {
-        let data_set =
-            RawDataSet::read_from_csv(&PathBuf::from("../data/iris.csv")).discretization();
+        let data_set = RawDataSet::read_from_csv(&PathBuf::from("../data/iris.csv"))
+            .discretization()
+            .normalize();
         assert_eq!(data_set.data.shape(), &[150, 5]);
         assert_eq!(data_set.get_x().shape(), &[150, 4]);
         assert_eq!(data_set.get_y().shape(), &[150, 1]);

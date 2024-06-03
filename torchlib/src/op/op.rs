@@ -182,7 +182,7 @@ impl OpTrait for PowerScalar {
                 .unwrap(),
         )
         .powf(self.scalar - 1.);
-    
+
         vec![from_matrix(a * t.transpose())]
     }
 }

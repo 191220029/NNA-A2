@@ -19,7 +19,7 @@ impl Loss for MSELoss {
         let target = factory.new_tensor(target, None);
         let t = factory.make_from_op(Op::Neg(Negate {}), vec![target], None);
         let t = factory.make_from_op(Op::EWiseAdd(EWiseAdd {}), vec![predicted, t], None);
-        let t = factory.make_from_op(Op::Power(PowerScalar {scalar: 2.}), vec![t], None);
+        let t = factory.make_from_op(Op::Power(PowerScalar { scalar: 2. }), vec![t], None);
         factory.make_from_op(Op::Sum(Summation { axis: None }), vec![t], None)
     }
 }
