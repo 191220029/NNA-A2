@@ -27,10 +27,6 @@ impl Module for Linear {
         }
     }
 
-    fn children(&self) -> Vec<Box<&dyn Module>> {
-        unimplemented!()
-    }
-
     fn forward(&mut self, x: ArrayD<f64>, factory: &mut TensorFactory) -> TensorId {
         let x = factory.new_tensor(x, None);
 

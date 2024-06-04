@@ -14,14 +14,6 @@ impl Module for Flatten {
         self.train = true;
     }
 
-    fn parameters(&self) -> Vec<crate::tensor::tensor::TensorId> {
-        vec![]
-    }
-
-    fn children(&self) -> Vec<Box<&dyn Module>> {
-        vec![]
-    }
-
     fn forward(&mut self, x: ndarray::ArrayD<f64>, factory: &mut TensorFactory) -> TensorId {
         let batch_size = x.shape()[0];
         let remains = if x.shape().len() > 1 {

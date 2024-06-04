@@ -6,13 +6,19 @@ pub mod flatten;
 pub mod initialize;
 pub mod linear;
 pub mod relu;
+pub mod sigmoid;
+pub mod softmax;
 
 pub trait Module {
     fn init(&mut self);
 
-    fn parameters(&self) -> Vec<TensorId>;
+    fn parameters(&self) -> Vec<crate::tensor::tensor::TensorId> {
+        vec![]
+    }
 
-    fn children(&self) -> Vec<Box<&dyn Module>>;
+    fn children(&self) -> Vec<Box<&dyn Module>> {
+        vec![]
+    }
 
     fn forward(&mut self, x: ArrayD<f64>, factory: &mut TensorFactory) -> TensorId;
 

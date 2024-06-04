@@ -11,14 +11,6 @@ impl Module for ReLU {
         self.train = true;
     }
 
-    fn parameters(&self) -> Vec<crate::tensor::tensor::TensorId> {
-        vec![]
-    }
-
-    fn children(&self) -> Vec<Box<&dyn Module>> {
-        vec![]
-    }
-
     fn forward(
         &mut self,
         x: ndarray::ArrayD<f64>,

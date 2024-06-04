@@ -1,11 +1,12 @@
 use ndarray::{ArrayD, Axis, IxDyn};
-use peroxide::fuga::{Matrix, PowOps, Shape::Row, Vector};
+use peroxide::fuga::{ExpLogOps, Matrix, PowOps, Shape::Row, Vector};
 
 use crate::tensor::{tensor::Tensor, tensor_factory::TensorFactory};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Op {
     EWiseAdd(EWiseAdd),
+    AddScalar(AddScalar),
     Sum(Summation),
     MatMul(MatrixMul),
     BCast(BroadCast),
@@ -13,6 +14,8 @@ pub enum Op {
     Power(PowerScalar),
     Reshape(Reshape),
     Max(MaxScalar),
+    Exp(Exp),
+    DivScalar(DivScalar),
 }
 
 impl Op {
@@ -26,6 +29,9 @@ impl Op {
             Op::Power(p) => p.compute(args),
             Op::Reshape(r) => r.compute(args),
             Op::Max(m) => m.compute(args),
+            Op::Exp(e) => e.compute(args),
+            Op::AddScalar(a) => a.compute(args),
+            Op::DivScalar(d) => d.compute(args),
         }
     }
     pub fn gradient(
@@ -43,6 +49,9 @@ impl Op {
             Op::Power(p) => p.gradient(out_grad, node, factory),
             Op::Reshape(r) => r.gradient(out_grad, node, factory),
             Op::Max(m) => m.gradient(out_grad, node, factory),
+            Op::Exp(e) => e.gradient(out_grad, node, factory),
+            Op::AddScalar(a) => a.gradient(out_grad, node, factory),
+            Op::DivScalar(d) => d.gradient(out_grad, node, factory),
         }
     }
 }
@@ -64,7 +73,20 @@ impl OpTrait for EWiseAdd {
         &args[0] + &args[1]
     }
     fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
-        vec![out_grad.clone(), out_grad.clone()]
+        vec![out_grad.to_owned(), out_grad.to_owned()]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct AddScalar {
+    pub scalar: f64,
+}
+impl OpTrait for AddScalar {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        &args[0] + self.scalar
+    }
+    fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
+        vec![out_grad.to_owned()]
     }
 }
 
@@ -75,7 +97,7 @@ impl OpTrait for Negate {
         -&args[0]
     }
     fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
-        vec![-out_grad.clone()]
+        vec![-out_grad.to_owned()]
     }
 }
 
@@ -149,7 +171,7 @@ impl OpTrait for BroadCast {
         factory: &TensorFactory,
     ) -> Vec<ArrayD<f64>> {
         let input_shape = factory.get(&node.inputs[0]).unwrap().shape();
-        let mut grad = out_grad.clone();
+        let mut grad = out_grad.to_owned();
 
         // 将广播后的梯度还原到原始形状
         for (axis, dim) in input_shape.iter().enumerate() {
@@ -242,6 +264,47 @@ impl OpTrait for MaxScalar {
         .unwrap();
         vec![from_matrix(
             into_matrix(out_grad.to_owned()) * into_matrix(grad),
+        )]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct DivScalar {
+    pub scalar: f64,
+}
+impl OpTrait for DivScalar {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        &args[0] / self.scalar
+    }
+    fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
+        vec![out_grad / self.scalar]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct Exp {}
+impl OpTrait for Exp {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        from_matrix(into_matrix(args[0].to_owned()).exp())
+    }
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        factory: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
+        vec![from_matrix(
+            into_matrix(out_grad.to_owned()).t()
+                * into_matrix(
+                    factory
+                        .get(&node.inputs[0])
+                        .unwrap()
+                        .cached_data
+                        .as_ref()
+                        .unwrap()
+                        .to_owned(),
+                )
+                .exp(),
         )]
     }
 }
