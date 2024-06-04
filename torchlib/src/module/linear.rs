@@ -64,14 +64,6 @@ impl Module for Linear {
     fn train(&mut self) {
         self.train = true;
     }
-
-    fn in_features(&self) -> usize {
-        self.in_features
-    }
-
-    fn out_features(&self) -> usize {
-        self.out_features
-    }
 }
 
 impl Linear {
@@ -98,5 +90,13 @@ impl Linear {
                 None
             },
         }
+    }
+
+    pub fn in_features(&self) -> usize {
+        self.in_features
+    }
+
+    pub fn out_features(&self) -> usize {
+        self.out_features
     }
 }

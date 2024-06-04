@@ -3,4 +3,5 @@ pub mod loss;
 pub mod module;
 pub mod op;
 pub mod optimizer;
+pub mod schedular;
 pub mod tensor;

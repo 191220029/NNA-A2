@@ -65,7 +65,12 @@ impl TensorFactory {
     pub fn remove(&mut self, k: &TensorId) -> Option<Tensor> {
         self.tensor_map.remove(k)
     }
-    pub fn backward(&mut self, k: &TensorId, out_grad: Option<ArrayD<f64>>) {
+    pub fn backward(
+        &mut self,
+        k: &TensorId,
+        out_grad: Option<ArrayD<f64>>,
+        retain_grad: Option<bool>,
+    ) {
         let node = self.get(k).unwrap();
         let out_grad = if let Some(out_grad) = out_grad {
             out_grad
@@ -75,7 +80,9 @@ impl TensorFactory {
 
         compute_gradient_of_variables(node.id, out_grad, self);
 
-        self.clean_up(k);
+        if retain_grad.unwrap_or(false) == false {
+            self.clean_up(k);
+        }
     }
 
     pub fn realize_cached_data(&mut self, k: &TensorId) {
@@ -99,7 +106,7 @@ impl TensorFactory {
         self.get_mut(k).unwrap().cached_data = r;
     }
 
-    pub fn clean_up(&mut self, k: &TensorId) {
+    fn clean_up(&mut self, k: &TensorId) {
         let graph = find_topo_sort(vec![*k], &self);
         graph.iter().for_each(|k| {
             if self.tensor_map.get_mut(k).unwrap().is_leaf() {
@@ -215,7 +222,7 @@ mod test_tensor {
             None,
         );
 
-        factory.backward(&d, None);
+        factory.backward(&d, None, Some(true));
 
         assert_eq!(
             factory
@@ -290,7 +297,7 @@ mod test_tensor {
             vec![d],
             None,
         );
-        factory.backward(&e, None);
+        factory.backward(&e, None, Some(true));
 
         assert_eq!(
             factory

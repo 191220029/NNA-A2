@@ -38,7 +38,7 @@ fn main() {
             );
             let l = loss.loss(predicted, y.clone(), &mut factory);
 
-            factory.backward(&l, None);
+            factory.backward(&l, None, None);
             opt.step(&mut factory);
         }
 

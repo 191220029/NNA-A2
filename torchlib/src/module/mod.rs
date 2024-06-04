@@ -2,15 +2,13 @@ use ndarray::ArrayD;
 
 use crate::tensor::{tensor::TensorId, tensor_factory::TensorFactory};
 
-mod initialize;
+pub mod flatten;
+pub mod initialize;
 pub mod linear;
+pub mod relu;
 
 pub trait Module {
     fn init(&mut self);
-
-    fn in_features(&self) -> usize;
-
-    fn out_features(&self) -> usize;
 
     fn parameters(&self) -> Vec<TensorId>;
 

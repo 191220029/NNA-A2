@@ -11,6 +11,8 @@ pub enum Op {
     BCast(BroadCast),
     Neg(Negate),
     Power(PowerScalar),
+    Reshape(Reshape),
+    Max(MaxScalar),
 }
 
 impl Op {
@@ -22,6 +24,8 @@ impl Op {
             Op::BCast(b) => b.compute(args),
             Op::Neg(n) => n.compute(args),
             Op::Power(p) => p.compute(args),
+            Op::Reshape(r) => r.compute(args),
+            Op::Max(m) => m.compute(args),
         }
     }
     pub fn gradient(
@@ -37,6 +41,8 @@ impl Op {
             Op::BCast(b) => b.gradient(out_grad, node, factory),
             Op::Neg(n) => n.gradient(out_grad, node, factory),
             Op::Power(p) => p.gradient(out_grad, node, factory),
+            Op::Reshape(r) => r.gradient(out_grad, node, factory),
+            Op::Max(m) => m.gradient(out_grad, node, factory),
         }
     }
 }
@@ -184,6 +190,59 @@ impl OpTrait for PowerScalar {
         .powf(self.scalar - 1.);
 
         vec![from_matrix(a * t.transpose())]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct Reshape {
+    pub shape: Vec<usize>,
+}
+impl OpTrait for Reshape {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        args[0].to_shared().reshape(IxDyn(&self.shape)).to_owned()
+    }
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        factory: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
+        vec![out_grad
+            .to_shared()
+            .reshape(factory.get(&node.inputs[0]).unwrap().shape())
+            .to_owned()]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct MaxScalar {
+    pub scalar: f64,
+}
+impl OpTrait for MaxScalar {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        let mut arg = args[0].clone();
+        arg.iter_mut().for_each(|x| *x = x.max(self.scalar));
+        arg
+    }
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        _: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
+        let grad = ArrayD::from_shape_vec(
+            node.shape(),
+            node.cached_data
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|x| if *x > 0. { 1. } else { 0. })
+                .collect(),
+        )
+        .unwrap();
+        vec![from_matrix(
+            into_matrix(out_grad.to_owned()) * into_matrix(grad),
+        )]
     }
 }
 

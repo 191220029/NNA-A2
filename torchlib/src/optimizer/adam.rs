@@ -47,6 +47,14 @@ impl Optimizer for Adam {
             factory.get_mut(p).unwrap().grad = None;
         })
     }
+
+    fn update_lr(&mut self, lr: Vec<f64>) {
+        self.lr = lr[0];
+    }
+
+    fn lr(&self) -> Vec<f64> {
+        vec![self.lr]
+    }
 }
 
 impl Adam {
