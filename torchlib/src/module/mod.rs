@@ -6,6 +6,8 @@ pub mod flatten;
 pub mod initialize;
 pub mod linear;
 pub mod relu;
+pub mod residual;
+pub mod sequential;
 pub mod sigmoid;
 pub mod softmax;
 

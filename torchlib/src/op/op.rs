@@ -1,5 +1,5 @@
 use ndarray::{ArrayD, Axis, IxDyn};
-use peroxide::fuga::{ExpLogOps, Matrix, PowOps, Shape::Row, Vector};
+use peroxide::fuga::{ExpLogOps, Matrix, MatrixProduct, PowOps, Shape::Row, Vector};
 
 use crate::tensor::{tensor::Tensor, tensor_factory::TensorFactory};
 
@@ -16,6 +16,7 @@ pub enum Op {
     Max(MaxScalar),
     Exp(Exp),
     DivScalar(DivScalar),
+    DivTensor(DivTensor),
 }
 
 impl Op {
@@ -32,6 +33,7 @@ impl Op {
             Op::Exp(e) => e.compute(args),
             Op::AddScalar(a) => a.compute(args),
             Op::DivScalar(d) => d.compute(args),
+            Op::DivTensor(d) => d.compute(args),
         }
     }
     pub fn gradient(
@@ -52,6 +54,7 @@ impl Op {
             Op::Exp(e) => e.gradient(out_grad, node, factory),
             Op::AddScalar(a) => a.gradient(out_grad, node, factory),
             Op::DivScalar(d) => d.gradient(out_grad, node, factory),
+            Op::DivTensor(d) => d.gradient(out_grad, node, factory),
         }
     }
 }
@@ -117,10 +120,10 @@ impl OpTrait for MatrixMul {
         let b = factory.get(&node.inputs[1]).unwrap();
         let grad_a = from_matrix(
             into_matrix(out_grad.to_owned())
-                * into_matrix(b.cached_data.clone().unwrap().t().to_owned()),
+                * into_matrix(b.cached_data.clone().unwrap().to_owned()).t(),
         );
         let grad_b = from_matrix(
-            into_matrix(a.cached_data.clone().unwrap().t().to_owned())
+            into_matrix(a.cached_data.clone().unwrap().to_owned()).t()
                 * into_matrix(out_grad.to_owned()),
         );
         return vec![grad_a, grad_b];
@@ -145,13 +148,6 @@ impl OpTrait for Summation {
         factory: &TensorFactory,
     ) -> Vec<ArrayD<f64>> {
         let input_shape = factory.get(&node.inputs[0]).unwrap().shape();
-        let mut shape = out_grad.shape().to_vec();
-
-        if let Some(axis) = self.axis {
-            shape.insert(axis, 1);
-        }
-
-        let out_grad = out_grad.to_shared().reshape(shape).to_owned();
         vec![out_grad.broadcast(input_shape).unwrap().to_owned()]
     }
 }
@@ -173,12 +169,18 @@ impl OpTrait for BroadCast {
         let input_shape = factory.get(&node.inputs[0]).unwrap().shape();
         let mut grad = out_grad.to_owned();
 
-        // 将广播后的梯度还原到原始形状
-        for (axis, dim) in input_shape.iter().enumerate() {
+        let y = self.shape.len() - input_shape.len();
+        let mut t = vec![1usize].repeat(y);
+        t.append(&mut input_shape.into_iter().map(|x| *x).collect());
+        let matched_input_shape = t.as_slice();
+
+        for (axis, dim) in matched_input_shape.iter().enumerate() {
             if *dim == 1 {
                 grad = grad.sum_axis(Axis(axis))
             }
         }
+
+        assert_eq!(grad.shape(), input_shape);
 
         return vec![grad];
     }
@@ -211,7 +213,7 @@ impl OpTrait for PowerScalar {
         )
         .powf(self.scalar - 1.);
 
-        vec![from_matrix(a * t.transpose())]
+        vec![from_matrix(a.hadamard(&t))]
     }
 }
 
@@ -258,12 +260,12 @@ impl OpTrait for MaxScalar {
                 .as_ref()
                 .unwrap()
                 .iter()
-                .map(|x| if *x > 0. { 1. } else { 0. })
+                .map(|x| if *x > self.scalar { 1. } else { 0. })
                 .collect(),
         )
         .unwrap();
         vec![from_matrix(
-            into_matrix(out_grad.to_owned()) * into_matrix(grad),
+            into_matrix(out_grad.to_owned()).hadamard(&into_matrix(grad)),
         )]
     }
 }
@@ -274,6 +276,20 @@ pub struct DivScalar {
 }
 impl OpTrait for DivScalar {
     fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        &args[0] / self.scalar
+    }
+    fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
+        vec![out_grad / self.scalar]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct DivTensor {
+    scalar: f64,
+}
+impl OpTrait for DivTensor {
+    fn compute(&self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        self.scalar = args[0].sum();
         &args[0] / self.scalar
     }
     fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
@@ -294,8 +310,8 @@ impl OpTrait for Exp {
         factory: &TensorFactory,
     ) -> Vec<ArrayD<f64>> {
         vec![from_matrix(
-            into_matrix(out_grad.to_owned()).t()
-                * into_matrix(
+            into_matrix(out_grad.to_owned()).hadamard(
+                &into_matrix(
                     factory
                         .get(&node.inputs[0])
                         .unwrap()
@@ -305,6 +321,7 @@ impl OpTrait for Exp {
                         .to_owned(),
                 )
                 .exp(),
+            ),
         )]
     }
 }

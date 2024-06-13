@@ -66,7 +66,7 @@ mod test_soft_max {
         let mut model = Sigmoid::new();
         let t = model.forward(x, factory);
         assert_eq!(
-            "",
+            "[[0.0066928509242848554, 0.11920292202211755, 0.5, 0.8807970779778823, 0.9933071490757153]]",
             factory
                 .get(&t)
                 .unwrap()
