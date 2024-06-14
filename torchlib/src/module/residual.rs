@@ -1,4 +1,7 @@
-use crate::{op::op::{EWiseAdd, Op}, tensor::{tensor::TensorId, tensor_factory::TensorFactory}};
+use crate::{
+    op::op::{EWiseAdd, Op},
+    tensor::{tensor::TensorId, tensor_factory::TensorFactory},
+};
 
 use super::Module;
 
@@ -31,6 +34,6 @@ impl Module for Residual {
 
 impl Residual {
     pub fn new(child: Box<dyn Module>) -> Self {
-        Self { train: true, child}
+        Self { train: true, child }
     }
 }

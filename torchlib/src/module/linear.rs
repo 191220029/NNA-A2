@@ -28,7 +28,6 @@ impl Module for Linear {
     }
 
     fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
-
         let x_out = factory.make_from_op(
             crate::op::op::Op::MatMul(MatrixMul {}),
             vec![x, self.weight],

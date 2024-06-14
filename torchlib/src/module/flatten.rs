@@ -64,19 +64,19 @@ mod test_flatten {
         let mut flatten = Flatten::new();
         flatten.init();
         let factory = &mut TensorFactory::default();
-        let t = factory.new_tensor(ArrayD::from_shape_vec(
-            IxDyn(&[3, 4, 4]),
-            vec![
-                1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
-                1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
-                1., 2., 3., 4., 1., 2., 3., 4.,
-            ],
-        )
-        .unwrap(), None);
-        let t = &flatten.forward(
-            t,
-            factory,
+        let t = factory.new_tensor(
+            ArrayD::from_shape_vec(
+                IxDyn(&[3, 4, 4]),
+                vec![
+                    1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
+                    1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
+                    1., 2., 3., 4., 1., 2., 3., 4.,
+                ],
+            )
+            .unwrap(),
+            None,
         );
+        let t = &flatten.forward(t, factory);
         assert_eq!("[[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],\n [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],\n [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]]",
         factory.get(t).unwrap().cached_data.as_ref().unwrap().to_string());
     }

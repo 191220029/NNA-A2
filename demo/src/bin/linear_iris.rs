@@ -30,12 +30,13 @@ fn main() {
             let x = ArrayD::from_shape_vec(IxDyn(x.shape()), x.to_vec()).unwrap();
             let y = y.next().unwrap();
             let y = ArrayD::from_shape_vec(IxDyn(y.shape()), y.to_vec()).unwrap();
-            let predicted = model.forward(
+            let x = factory.new_tensor(
                 x.to_shared()
                     .reshape(IxDyn(&[1, model.in_features()]))
                     .to_owned(),
-                &mut factory,
+                None,
             );
+            let predicted = model.forward(x, &mut factory);
             let l = loss.loss(predicted, y.clone(), &mut factory);
 
             factory.backward(&l, None, None);
@@ -43,7 +44,8 @@ fn main() {
         }
 
         if (episode + 1) % 10 == 0 {
-            let predicted = model.forward(dataset.get_x(), &mut factory);
+            let x = factory.new_tensor(dataset.get_x(), None);
+            let predicted = model.forward(x, &mut factory);
             let l = loss.loss(predicted, dataset.get_y(), &mut factory);
 
             println!(

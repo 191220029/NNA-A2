@@ -14,11 +14,7 @@ impl Module for SoftMax {
         self.train = true;
     }
 
-    fn forward(
-        &mut self,
-        x: TensorId,
-        factory: &mut TensorFactory,
-    ) -> TensorId {
+    fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
         let t = factory.make_from_op(crate::op::op::Op::Exp(Exp {}), vec![x], None);
         let s = factory.make_from_op(
             crate::op::op::Op::Sum(Summation { axis: None }),

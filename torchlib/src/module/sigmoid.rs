@@ -14,11 +14,7 @@ impl Module for Sigmoid {
         self.train = true;
     }
 
-    fn forward(
-        &mut self,
-        x: TensorId,
-        factory: &mut TensorFactory,
-    ) -> TensorId {
+    fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
         let t = factory.make_from_op(crate::op::op::Op::Neg(Negate {}), vec![x], None);
         let t = factory.make_from_op(crate::op::op::Op::Exp(Exp {}), vec![t], None);
         let t = factory.make_from_op(

@@ -44,9 +44,11 @@ impl Module for Sequential {
 
 impl Sequential {
     pub fn new(childs: Vec<Box<dyn Module>>) -> Self {
-        let mut s = Self { train: true
-            , childs:  childs};
-            s.init();
-            s
+        let mut s = Self {
+            train: true,
+            childs: childs,
+        };
+        s.init();
+        s
     }
 }
