@@ -1,4 +1,4 @@
-use crate::op::op::MaxScalar;
+use crate::{op::op::MaxScalar, tensor::{tensor::TensorId, tensor_factory::TensorFactory}};
 
 use super::Module;
 
@@ -13,10 +13,9 @@ impl Module for ReLU {
 
     fn forward(
         &mut self,
-        x: ndarray::ArrayD<f64>,
-        factory: &mut crate::tensor::tensor_factory::TensorFactory,
-    ) -> crate::tensor::tensor::TensorId {
-        let x = factory.new_tensor(x, None);
+        x: TensorId,
+        factory: &mut TensorFactory,
+    ) -> TensorId {
         factory.make_from_op(
             crate::op::op::Op::Max(MaxScalar { scalar: 0. }),
             vec![x],

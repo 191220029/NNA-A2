@@ -27,8 +27,7 @@ impl Module for Linear {
         }
     }
 
-    fn forward(&mut self, x: ArrayD<f64>, factory: &mut TensorFactory) -> TensorId {
-        let x = factory.new_tensor(x, None);
+    fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
 
         let x_out = factory.make_from_op(
             crate::op::op::Op::MatMul(MatrixMul {}),

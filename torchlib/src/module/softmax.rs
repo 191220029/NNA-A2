@@ -1,6 +1,6 @@
 use crate::{
     op::op::{DivScalar, Exp, Summation},
-    tensor::tensor_factory::TensorFactory,
+    tensor::{tensor::TensorId, tensor_factory::TensorFactory},
 };
 
 use super::Module;
@@ -16,10 +16,9 @@ impl Module for SoftMax {
 
     fn forward(
         &mut self,
-        x: ndarray::ArrayD<f64>,
+        x: TensorId,
         factory: &mut TensorFactory,
-    ) -> crate::tensor::tensor::TensorId {
-        let x = factory.new_tensor(x, None);
+    ) -> TensorId {
         let t = factory.make_from_op(crate::op::op::Op::Exp(Exp {}), vec![x], None);
         let s = factory.make_from_op(
             crate::op::op::Op::Sum(Summation { axis: None }),
@@ -64,6 +63,7 @@ mod test_soft_max {
         let data = vec![-5., -2., 0., 2., 5.];
         let x = ArrayD::from_shape_vec(IxDyn(&[1, 5]), data).unwrap();
         let mut model = SoftMax::new();
+        let x = factory.new_tensor(x, None);
         let t = model.forward(x, factory);
         assert_eq!("[[0.00004293209435280523, 0.0008623141663130462, 0.006371687749789713, 0.04708075822806539, 0.945642307761479]]", factory.get(&t).unwrap().cached_data.as_ref().unwrap().to_string());
         factory.backward(&t, None, None);

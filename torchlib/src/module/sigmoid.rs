@@ -1,6 +1,6 @@
 use crate::{
     op::op::{AddScalar, Exp, Negate, PowerScalar},
-    tensor::tensor::TensorId,
+    tensor::{tensor::TensorId, tensor_factory::TensorFactory},
 };
 
 use super::Module;
@@ -16,10 +16,9 @@ impl Module for Sigmoid {
 
     fn forward(
         &mut self,
-        x: ndarray::ArrayD<f64>,
-        factory: &mut crate::tensor::tensor_factory::TensorFactory,
+        x: TensorId,
+        factory: &mut TensorFactory,
     ) -> TensorId {
-        let x = factory.new_tensor(x, None);
         let t = factory.make_from_op(crate::op::op::Op::Neg(Negate {}), vec![x], None);
         let t = factory.make_from_op(crate::op::op::Op::Exp(Exp {}), vec![t], None);
         let t = factory.make_from_op(
@@ -63,6 +62,7 @@ mod test_soft_max {
         let factory = &mut TensorFactory::default();
         let data = vec![-5., -2., 0., 2., 5.];
         let x = ArrayD::from_shape_vec(IxDyn(&[1, 5]), data).unwrap();
+        let x = factory.new_tensor(x, None);
         let mut model = Sigmoid::new();
         let t = model.forward(x, factory);
         assert_eq!(

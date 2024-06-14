@@ -14,11 +14,12 @@ impl Module for Flatten {
         self.train = true;
     }
 
-    fn forward(&mut self, x: ndarray::ArrayD<f64>, factory: &mut TensorFactory) -> TensorId {
-        let batch_size = x.shape()[0];
-        let remains = if x.shape().len() > 1 {
+    fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
+        let shape = factory.get(&x).unwrap().shape();
+        let batch_size = shape[0];
+        let remains = if shape.len() > 1 {
             let mut t = 1;
-            for y in &x.shape()[1..] {
+            for y in &shape[1..] {
                 t *= y;
             }
             t
@@ -26,7 +27,6 @@ impl Module for Flatten {
             1
         };
 
-        let x = factory.new_tensor(x, None);
         factory.make_from_op(
             crate::op::op::Op::Reshape(Reshape {
                 shape: vec![batch_size, remains],
@@ -64,16 +64,17 @@ mod test_flatten {
         let mut flatten = Flatten::new();
         flatten.init();
         let factory = &mut TensorFactory::default();
+        let t = factory.new_tensor(ArrayD::from_shape_vec(
+            IxDyn(&[3, 4, 4]),
+            vec![
+                1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
+                1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
+                1., 2., 3., 4., 1., 2., 3., 4.,
+            ],
+        )
+        .unwrap(), None);
         let t = &flatten.forward(
-            ArrayD::from_shape_vec(
-                IxDyn(&[3, 4, 4]),
-                vec![
-                    1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
-                    1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4., 1., 2., 3., 4.,
-                    1., 2., 3., 4., 1., 2., 3., 4.,
-                ],
-            )
-            .unwrap(),
+            t,
             factory,
         );
         assert_eq!("[[1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],\n [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],\n [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]]",

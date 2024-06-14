@@ -1,5 +1,3 @@
-use ndarray::ArrayD;
-
 use crate::tensor::{tensor::TensorId, tensor_factory::TensorFactory};
 
 pub mod flatten;
@@ -18,11 +16,11 @@ pub trait Module {
         vec![]
     }
 
-    fn children(&self) -> Vec<Box<&dyn Module>> {
+    fn children(&self) -> Vec<&Box<dyn Module>> {
         vec![]
     }
 
-    fn forward(&mut self, x: ArrayD<f64>, factory: &mut TensorFactory) -> TensorId;
+    fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId;
 
     fn eval(&mut self);
 
