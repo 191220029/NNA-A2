@@ -10,6 +10,7 @@ pub enum Op {
     EWiseAdd(EWiseAdd),
     AddScalar(AddScalar),
     Sum(Summation),
+    Mean(Mean),
     MatMul(MatrixMul),
     MulScalar(MulScalar),
     MulHadamard(MulHadamard),
@@ -44,6 +45,7 @@ impl Op {
             Op::DivTensor(d) => d.compute(args),
             Op::Log(l) => l.compute(args),
             Op::GetMax(g) => g.compute(args),
+            Op::Mean(m) => m.compute(args),
         }
     }
     pub fn gradient(
@@ -69,6 +71,7 @@ impl Op {
             Op::DivTensor(d) => d.gradient(out_grad, node, factory),
             Op::Log(l) => l.gradient(out_grad, node, factory),
             Op::GetMax(g) => g.gradient(out_grad, node, factory),
+            Op::Mean(m) => m.gradient(out_grad, node, factory),
         }
     }
 }
@@ -87,13 +90,12 @@ trait OpTrait {
 pub struct EWiseAdd {}
 impl OpTrait for EWiseAdd {
     fn compute(&mut self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
-        if args[1].shape() != args[0].shape() {
-            eprintln!("{:?} {:?}", args[1].shape(), args[0].shape());
-            let t = args[1].broadcast(args[0].shape()).unwrap();
-            &args[0] + &t
-        } else {
-            &args[0] + &args[1]
-        }
+        // if args[1].shape() != args[0].shape() {
+        //     let t = args[1].broadcast(args[0].shape()).unwrap();
+        //     &args[0] + &t
+        // } else {
+        &args[0] + &args[1]
+        // }
     }
     fn gradient(&self, out_grad: &ArrayD<f64>, _: &Tensor, _: &TensorFactory) -> Vec<ArrayD<f64>> {
         vec![out_grad.to_owned(), out_grad.to_owned()]
@@ -227,6 +229,33 @@ impl OpTrait for Summation {
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
+pub struct Mean {}
+impl OpTrait for Mean {
+    fn compute(&mut self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
+        ArrayD::from_elem(IxDyn(&[1]), args[0].mean().unwrap())
+    }
+    fn gradient(
+        &self,
+        out_grad: &ArrayD<f64>,
+        node: &Tensor,
+        factory: &TensorFactory,
+    ) -> Vec<ArrayD<f64>> {
+        let input_shape = factory.get(&node.inputs[0]).unwrap().shape();
+        let input_size = factory
+            .get(&node.inputs[0])
+            .unwrap()
+            .cached_data
+            .as_ref()
+            .unwrap()
+            .len();
+        vec![(out_grad / input_size as f64)
+            .broadcast(input_shape)
+            .unwrap()
+            .to_owned()]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct BroadCast {
     pub shape: Vec<usize>,
 }
@@ -253,6 +282,8 @@ impl OpTrait for BroadCast {
                 grad = grad.sum_axis(Axis(axis))
             }
         }
+
+        grad = grad.to_shape(input_shape).unwrap().to_owned();
 
         assert_eq!(grad.shape(), input_shape);
 
@@ -352,7 +383,9 @@ impl OpTrait for GetMax {
     fn compute(&mut self, args: Vec<ArrayD<f64>>) -> ArrayD<f64> {
         let mut x = ArrayD::default(IxDyn(&[0]));
         args[0].axis_iter(Axis(self.axis)).for_each(|m| {
-            if m.to_string().replace('[', " ").replace(']', " ").trim() > x.to_string().replace('[', " ").replace(']', " ").trim() {
+            if m.to_string().replace('[', " ").replace(']', " ").trim()
+                > x.to_string().replace('[', " ").replace(']', " ").trim()
+            {
                 x = m.to_owned();
             }
         });

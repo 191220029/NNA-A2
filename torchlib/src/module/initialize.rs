@@ -17,7 +17,6 @@ pub fn init_he(in_features: usize, out_features: usize, factory: &mut TensorFact
     return t;
 }
 
-//// 均匀分布版Xavier初始化
 pub fn init_xavier(
     in_features: usize,
     out_features: usize,
