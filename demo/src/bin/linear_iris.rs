@@ -2,7 +2,7 @@ use std::path::Path;
 
 use ndarray::{ArrayD, IxDyn};
 use torchlib::{
-    dataset::data_set::RawDataSet,
+    dataset::csv_data_set::RawCsvDataSet,
     loss::{loss::Loss, mse::MSELoss},
     module::{linear::Linear, Module},
     optimizer::{optimizer::Optimizer, sgd::SGD},
@@ -10,7 +10,7 @@ use torchlib::{
 };
 
 fn main() {
-    let dataset = RawDataSet::read_from_csv(&Path::new("../data/iris.csv"))
+    let dataset = RawCsvDataSet::read_from_csv(&Path::new("../data/iris.csv"))
         .discretization()
         .normalize();
     let x = dataset.get_x();
