@@ -10,7 +10,8 @@ use ndarray::{ArrayD, IxDyn};
 use super::data_set::DataSet;
 
 pub struct RawCsvDataSet {
-    data: ArrayD<String>,
+    x: ArrayD<String>,
+    y: ArrayD<String>,
     labels: Vec<String>,
 }
 
@@ -18,7 +19,8 @@ impl RawCsvDataSet {
     pub fn read_from_csv(csv_file: &Path) -> Self {
         let mut reader = BufReader::new(File::open(csv_file).unwrap());
         let mut buf = String::new();
-        let mut data: Vec<String> = vec![];
+        let mut x: Vec<String> = vec![];
+        let mut y: Vec<String> = vec![];
         let mut i = 0;
 
         let mut labels = vec![];
@@ -31,14 +33,21 @@ impl RawCsvDataSet {
                 labels = splits.map(|s| s.trim().to_owned()).collect();
                 i += 1;
             } else {
-                data.append(&mut splits.map(|s| s.trim().to_owned()).collect());
+                let mut line: Vec<String> = splits.map(|s| s.trim().to_owned()).collect();
+                let this_y = line.last().unwrap().to_string();
+                line.remove(line.len() - 1);
+                x.append(&mut line);
+                y.push(this_y);
                 i += 1;
             }
             buf.clear();
         }
 
         Self {
-            data: ArrayD::from_shape_vec(IxDyn(&[i - 1, labels.len()]), data)
+            x: ArrayD::from_shape_vec(IxDyn(&[i - 1, labels.len() - 1]), x)
+                .unwrap()
+                .to_owned(),
+            y: ArrayD::from_shape_vec(IxDyn(&[i - 1, 1]), y)
                 .unwrap()
                 .to_owned(),
             labels,
@@ -46,10 +55,10 @@ impl RawCsvDataSet {
     }
 
     pub fn discretization(self) -> DataSet {
-        let mut discretized_data: Vec<f64> = vec![];
-        self.data.columns().into_iter().for_each(|c| {
+        let mut discretized_x: Vec<f64> = vec![];
+        self.x.columns().into_iter().for_each(|c| {
             let mut set: HashMap<String, f64> = HashMap::new();
-            discretized_data.append(
+            discretized_x.append(
                 &mut c
                     .into_iter()
                     .map(|e| match e.parse::<f64>() {
@@ -65,11 +74,27 @@ impl RawCsvDataSet {
                     .collect(),
             )
         });
+        let discretized_x = ArrayD::from_shape_vec(self.x.t().shape(), discretized_x).unwrap();
 
-        let discretized_data =
-            ArrayD::from_shape_vec(self.data.t().shape(), discretized_data).unwrap();
+        let mut set: HashMap<String, f64> = HashMap::new();
+        let discretized_y: Vec<f64> = self
+            .y
+            .into_iter()
+            .map(|y| match y.parse::<f64>() {
+                Ok(y) => y,
+                Err(_) => match set.get(&y) {
+                    Some(y) => *y,
+                    None => {
+                        set.insert(y.clone(), set.len() as f64);
+                        (set.len() - 1) as f64
+                    }
+                },
+            })
+            .collect();
+
         DataSet {
-            data: discretized_data.t().to_owned(),
+            x: discretized_x.t().to_owned(),
+            y: ArrayD::from_shape_vec(IxDyn(&[discretized_y.len(), 1]), discretized_y).unwrap(),
             labels: self.labels,
         }
     }
@@ -86,7 +111,6 @@ mod test_csv_data_set {
         let data_set = RawCsvDataSet::read_from_csv(&PathBuf::from("../data/iris.csv"))
             .discretization()
             .normalize();
-        assert_eq!(data_set.data.shape(), &[150, 5]);
         assert_eq!(data_set.get_x().shape(), &[150, 4]);
         assert_eq!(data_set.get_y().shape(), &[150, 1]);
     }

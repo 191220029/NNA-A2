@@ -6,16 +6,39 @@ use std::{
 
 use ndarray::{ArrayD, IxDyn};
 
+use super::data_set::DataSet;
+
 pub struct RawByteDataSet {
-    data: ArrayD<u8>,
-    labels: Vec<u8>,
+    x: ArrayD<u8>,
+    y: Vec<u8>,
 }
 
 impl RawByteDataSet {
     pub fn read_from_binary(binary_data: &Path, binary_label: &Path) -> Self {
         Self {
-            data: Self::read_data(binary_data),
-            labels: Self::read_label(binary_label),
+            x: Self::read_data(binary_data),
+            y: Self::read_label(binary_label),
+        }
+    }
+
+    pub fn as_data_set(self) -> DataSet {
+        DataSet {
+            x: ArrayD::from_shape_vec(
+                self.x.shape(),
+                self.x
+                    .clone()
+                    .into_raw_vec()
+                    .into_iter()
+                    .map(|x| x as f64)
+                    .collect(),
+            )
+            .unwrap(),
+            y: ArrayD::from_shape_vec(
+                IxDyn(&[self.y.len(), 1]),
+                self.y.into_iter().map(|y| y as f64).collect(),
+            )
+            .unwrap(),
+            labels: vec![],
         }
     }
 
@@ -75,9 +98,10 @@ mod test_byte_data_set {
         let data_set = RawByteDataSet::read_from_binary(
             &PathBuf::from("../data/MNIST/raw/train-images-idx3-ubyte"),
             &PathBuf::from("../data/MNIST/raw/train-labels-idx1-ubyte"),
-        );
+        )
+        .as_data_set();
 
-        assert_eq!(data_set.data.shape(), &[60000, 28, 28]);
-        assert_eq!(data_set.labels.len(), 60000);
+        assert_eq!(data_set.x.shape(), &[60000, 28, 28]);
+        assert_eq!(data_set.y.len(), 60000);
     }
 }
