@@ -40,6 +40,12 @@ impl Module for Sequential {
     fn children(&self) -> Vec<&Box<dyn Module>> {
         self.childs.iter().map(|x| x).collect()
     }
+
+    fn parameters(&self) -> Vec<TensorId> {
+        let mut p = vec![];
+        self.childs.iter().for_each(|child| {p.append(&mut child.parameters());});
+        p
+    }
 }
 
 impl Sequential {

@@ -16,6 +16,10 @@ impl Module for Residual {
         self.child.init();
     }
 
+    fn parameters(&self) -> Vec<TensorId> {
+        self.child.parameters()
+    }
+
     fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
         let t = self.child.forward(x, factory);
         factory.make_from_op(Op::EWiseAdd(EWiseAdd {}), vec![x, t], None)

@@ -1,9 +1,21 @@
 use std::path::Path;
 
-use torchlib::{dataset::byte_data_set::RawByteDataSet, loss::{loss::Loss, mse::MSELoss}, module::{flatten::Flatten, linear::Linear, residual::Residual, sequential::Sequential, Module}, tensor::tensor_factory::TensorFactory};
+use torchlib::{
+    dataset::byte_data_set::RawByteDataSet,
+    loss::{loss::Loss, mse::MSELoss},
+    module::{
+        flatten::Flatten, linear::Linear, residual::Residual, sequential::Sequential, Module,
+    },
+    optimizer::{adam::Adam, optimizer::Optimizer},
+    tensor::tensor_factory::TensorFactory,
+};
 
-fn main()  {
-    let dataset = RawByteDataSet::read_from_binary(&Path::new("../data/MNIST/raw/train-images-idx3-ubyte"), &Path::new("../data/MNIST/raw/train-labels-idx1-ubyte")).as_data_set();
+fn main() {
+    let dataset = RawByteDataSet::read_from_binary(
+        &Path::new("../data/MNIST/raw/train-images-idx3-ubyte"),
+        &Path::new("../data/MNIST/raw/train-labels-idx1-ubyte"),
+    )
+    .as_data_set();
     let factory = &mut TensorFactory::default();
 
     let x_shape = dataset.shape();
@@ -20,13 +32,16 @@ fn main()  {
         Box::new(linear_end),
     ]);
 
-    for i in  0..3   {
+    let mut opt = Adam::new(model.parameters(), None, None, None, None, &factory);
+
+    for i in 0..2 {
         let x = factory.new_tensor(dataset.get_x(), None);
         let loss = MSELoss::new();
         let y = model.forward(x, factory);
         let l = loss.loss(y, dataset.get_y(), factory);
 
-        println!("episode={i}, loss={}", factory.get(&l).unwrap().cached_data.as_ref().unwrap().to_string());
         factory.backward(&l, None, None);
+        opt.step(factory);
+        println!("episode={i}");
     }
 }

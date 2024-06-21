@@ -64,11 +64,11 @@ impl Adam {
         beta_1: Option<f64>,
         beta_2: Option<f64>,
         eps: Option<f64>,
-        facotry: &TensorFactory,
+        factory: &TensorFactory,
     ) -> Self {
         let m: Vec<ArrayD<f64>> = params
             .iter()
-            .map(|p| ArrayD::zeros(facotry.get(p).unwrap().shape()))
+            .map(|p| ArrayD::zeros(factory.get(p).unwrap().shape()))
             .collect();
         Self {
             params,

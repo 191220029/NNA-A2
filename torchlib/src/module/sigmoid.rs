@@ -1,5 +1,5 @@
 use crate::{
-    op::op::{AddScalar, Exp, Negate, PowerScalar},
+    op::op::{AddScalar, Exp, Negate, Op, PowerScalar},
     tensor::{tensor::TensorId, tensor_factory::TensorFactory},
 };
 
@@ -15,8 +15,8 @@ impl Module for Sigmoid {
     }
 
     fn forward(&mut self, x: TensorId, factory: &mut TensorFactory) -> TensorId {
-        let t = factory.make_from_op(crate::op::op::Op::Neg(Negate {}), vec![x], None);
-        let t = factory.make_from_op(crate::op::op::Op::Exp(Exp {}), vec![t], None);
+        let t = factory.make_from_op(Op::Neg(Negate {}), vec![x], None);
+        let t = factory.make_from_op(Op::Exp(Exp {}), vec![t], None);
         let t = factory.make_from_op(
             crate::op::op::Op::AddScalar(AddScalar { scalar: 1. }),
             vec![t],
