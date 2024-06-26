@@ -39,6 +39,8 @@ impl Optimizer for Momentum {
                 )
             }
         }
+        factory.clean_all(self.params.clone());
+        self.reset_grad(factory);
     }
 
     fn reset_grad(&mut self, factory: &mut TensorFactory) {

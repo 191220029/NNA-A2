@@ -15,6 +15,8 @@ impl Optimizer for SGD {
             let data = t.cached_data.as_ref().unwrap();
             t.cached_data = Some(data - grad * self.lr);
         });
+        factory.clean_all(self.params.clone());
+        self.reset_grad(factory);
     }
 
     fn reset_grad(&mut self, factory: &mut TensorFactory) {

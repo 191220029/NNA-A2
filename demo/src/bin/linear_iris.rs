@@ -4,7 +4,7 @@ use ndarray::{ArrayD, IxDyn};
 use torchlib::{
     dataset::csv_data_set::RawCsvDataSet,
     loss::{loss::Loss, mse::MSELoss},
-    module::{linear::Linear, Module},
+    module::{linear::Linear, relu::ReLU, sequential::Sequential, Module},
     optimizer::{optimizer::Optimizer, sgd::SGD},
     tensor::tensor_factory::TensorFactory,
 };
@@ -17,7 +17,10 @@ fn main() {
     let y = dataset.get_y();
 
     let mut factory = TensorFactory::default();
-    let mut model = Linear::new(x.shape()[1], y.shape()[1], None, &mut factory);
+    let in_features = x.shape()[1];
+    let linear = Linear::new(in_features, y.shape()[1], None, &mut factory);
+    let relu = ReLU::new();
+    let mut model = Sequential::new(vec![Box::new(linear), Box::new(relu)]);
     let mut opt = SGD::new(model.parameters(), 0.01);
     let loss = MSELoss::new();
     for episode in 0..100 {
@@ -31,9 +34,7 @@ fn main() {
             let y = y.next().unwrap();
             let y = ArrayD::from_shape_vec(IxDyn(y.shape()), y.to_vec()).unwrap();
             let x = factory.new_tensor(
-                x.to_shared()
-                    .reshape(IxDyn(&[1, model.in_features()]))
-                    .to_owned(),
+                x.to_shared().reshape(IxDyn(&[1, in_features])).to_owned(),
                 None,
             );
             let predicted = model.forward(x, &mut factory);

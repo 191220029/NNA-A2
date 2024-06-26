@@ -39,7 +39,10 @@ impl Optimizer for Adam {
                 factory.get(param).unwrap().cached_data.as_ref().unwrap()
                     - lr_t * m_hat / (from_matrix(v_hat.sqrt()) + self.eps),
             );
+
         }
+        factory.clean_all(self.params.clone());
+        self.reset_grad(factory);
     }
 
     fn reset_grad(&mut self, factory: &mut TensorFactory) {

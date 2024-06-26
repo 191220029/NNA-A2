@@ -117,6 +117,17 @@ impl TensorFactory {
         });
     }
 
+    pub fn clean_all(&mut self, filters: Vec<TensorId>) {
+        let not_parms: Vec<_> = self.tensor_map.iter().filter_map(|(id, _)| if filters.contains(&id) {
+            None
+        } else {
+            Some(*id)
+        }).collect();
+        not_parms.iter().for_each(|id| {
+            self.tensor_map.remove(id);
+        })
+    }
+
     fn insert_tensor(&mut self, mut tensor: Tensor) -> TensorId {
         match self.tensor_map.keys().max().cloned() {
             Some(x) => {

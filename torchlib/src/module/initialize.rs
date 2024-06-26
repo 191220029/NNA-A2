@@ -13,7 +13,6 @@ pub fn init_he(in_features: usize, out_features: usize, factory: &mut TensorFact
         Normal::new(0., stddev).unwrap(),
     );
     let t = factory.new_tensor(weights, None);
-    // eprintln!("init_He generates weight {t}: {:?}", factory.get(&t).unwrap().cached_data);
     return t;
 }
 
